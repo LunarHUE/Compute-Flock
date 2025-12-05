@@ -1,0 +1,30 @@
+syntax = "proto3";
+package adoption.v1;
+option go_package = "./proto";
+
+service FlockService {
+  // Controller calls this to adopt a node
+  rpc Adopt (AdoptRequest) returns (AdoptResponse);
+  // Compute nodes call this to heartbeat/check-in
+  rpc Heartbeat (HeartbeatRequest) returns (HeartbeatResponse);
+}
+
+message AdoptRequest {
+  string cluster_token = 1;
+  string controller_ip = 2;
+  string role = 3; // "server" or "agent"
+}
+
+message AdoptResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message HeartbeatRequest {
+  string node_id = 1;
+  string status = 2;
+}
+
+message HeartbeatResponse {
+  bool reconfigure = 1; // If true, node should revert to pending state
+}

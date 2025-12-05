@@ -1,0 +1,36 @@
+version: v2
+clean: true
+
+plugins:
+  # - remote: buf.build/bufbuild/es:v2.2.3
+  #   out: libs/proto-js/src/gen
+  #   opt: target=ts
+  #   include_imports: true
+  - remote: buf.build/protocolbuffers/go
+    out: pkg/proto
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: pkg/proto
+    opt: paths=source_relative
+  # - remote: buf.build/bufbuild/validate-go:v1.2.1
+  #   out: libs/proto-go/gen
+  #   opt: paths=source_relative
+
+managed:
+  # 'enabled: true' turns managed mode on, 'enabled: false' ignores all managed mode options.
+  enabled: true # default: false
+  # disable:
+  #   - file_option: go_package_prefix
+  #     module: buf.build/bufbuild/protovalidate
+
+  override:
+    # When 'file_option' and 'value' are set, managed mode uses the value set with
+    # this rule instead of the default value or sets it to this value if the default
+    # value is none.
+    # 
+    # Example: Modify the java_package options to <net>.<proto_package> for all files.
+    # Also modify go_package_prefix to be company.com/foo/bar for all files.
+    # - file_option: java_package_prefix
+    #   value: net
+    - file_option: go_package_prefix
+      value: github.com/lunarhue/compute-flock/pkg/proto
