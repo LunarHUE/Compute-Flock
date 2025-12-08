@@ -1,10 +1,12 @@
 package discovery
 
 import (
+	"fmt"
 	"log"
 	"time"
 
 	zeroconf "github.com/lunarhue/compute-flock-zeroconf"
+	"github.com/lunarhue/libs-go/metadata"
 )
 
 // Service Types
@@ -17,10 +19,24 @@ var (
 // Returns the client so you can Close() it later.
 func StartAgentBroadcast(id string, port uint16) (*zeroconf.Client, error) {
 	me := zeroconf.NewService(TypePending, id, port)
-	me.Text = []string{"version=1.0", "cpu=4", "distro=nixos"} // Set Metadata
+	sysinfo, err := metadata.GetSystemInfo()
+	if err != nil {
+		me.Text = []string{"version=1.0", "error=" + err.Error()}
+		log.Printf("Failed to get system info: %v", err)
+	} else {
+		// Add useful metadata
+		me.Text = []string{
+			"version=1.0",
+			"cpu=" + fmt.Sprintf("%d", sysinfo.CPUCores),
+			"distro=" + sysinfo.Arch,
+			"ip=" + sysinfo.MainIP,
+			"mac=" + sysinfo.MainMAC,
+			"os=" + sysinfo.OS,
+			"disk=" + fmt.Sprintf("%f", sysinfo.TotalDiskGB),
+			"mem=" + fmt.Sprintf("%f", sysinfo.TotalMemoryGB),
+		}
+	}
 
-	// We Publish ourselves AND we can optionally browse here if we wanted to.
-	// For the Agent, we just want to publish existence and be ready.
 	client, err := zeroconf.New().
 		Publish(me).
 		Open()
@@ -45,7 +61,7 @@ func ScanForControllers(duration time.Duration) string {
 
 		if e.Op == zeroconf.OpAdded && len(e.Addrs) > 0 {
 			// We found a candidate
-			log.Printf("🔎 Discovered Controller: %s", e.Name)
+			log.Printf("Discovered Controller: %s", e.Name)
 			select {
 			case foundIP <- e.Addrs[0].String():
 			default:
