@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 
 	"github.com/lunarhue/libs-go/log"
 
 	"github.com/lunarhue/compute-flock/pkg/discovery"
+	"github.com/lunarhue/compute-flock/pkg/k3s"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -28,7 +30,7 @@ const (
 var (
 	NodeID       string
 	CurrentState FlockMode = ModePending
-	Port                   = 9000
+	DefaultPort            = 9000
 )
 
 type server struct {
@@ -52,8 +54,20 @@ func main() {
 	hostname, _ := os.Hostname()
 	NodeID = hostname
 
+	// Verify that the prerequisites are met
+	if err := k3s.VerifyK3sInstallation(); err != nil {
+		log.Panicf("K3s verification failed: %v", err)
+	}
+
 	// Start GRPC Server (Listens on all modes)
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", Port))
+	apiPort := findOpenPort(DefaultPort)
+	if apiPort == 0 {
+		log.Panic("No open port found")
+	} else if apiPort != DefaultPort {
+		log.Warnf("Default port %d is in use. Using port %d instead.", DefaultPort, apiPort)
+	}
+
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", apiPort))
 	if err != nil {
 		log.Panicf("failed to listen: %v", err)
 	}
@@ -64,12 +78,29 @@ func main() {
 	// STATE MACHINE
 	switch *mode {
 	case "controller":
-		discovery.RunControllerMode(NodeID, uint16(Port), func(ip, role string) { adoptNode(currentLocalIP(), ip, role) })
+		discovery.RunControllerMode(NodeID, uint16(DefaultPort), func(ip, role string) { adoptNode(currentLocalIP(), ip, role) })
 	case "compute":
 		discovery.RunComputeMode()
 	case "auto":
-		discovery.RunPendingMode(NodeID, uint16(Port))
+		discovery.RunPendingMode(NodeID, uint16(DefaultPort))
 	}
+}
+
+func findOpenPort(defaultPort int) int {
+	const maxPort = 32767 // Max positive value for int16
+
+	for port := defaultPort; port <= maxPort; port++ {
+		addr := net.JoinHostPort("", strconv.Itoa(port))
+		listener, err := net.Listen("tcp", addr)
+
+		// If err is nil, the port is available
+		if err == nil {
+			listener.Close()
+			return port
+		}
+	}
+
+	return 0
 }
 
 func currentLocalIP() string {
@@ -84,7 +115,7 @@ func currentLocalIP() string {
 }
 
 func adoptNode(controllerIp, computeIp string, role string) {
-	conn, err := grpc.NewClient(fmt.Sprintf("%s:%d", computeIp, Port), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(fmt.Sprintf("%s:%d", computeIp, DefaultPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Errorf("Failed to connect to %s: %v", computeIp, err)
 		return

@@ -13,10 +13,8 @@ import (
 func RunControllerMode(NodeID string, Port uint16, callback func(ip string, role string)) {
 	log.Info("State: CONTROLLER. Managing Cluster...")
 
-	// 1. Define Myself (The Controller Service)
 	me := zeroconf.NewService(TypeController, NodeID, Port)
 
-	// 2. Define the Callback for finding new nodes
 	onNodeFound := func(e zeroconf.Event) {
 		if e.Op == zeroconf.OpAdded && len(e.Addrs) > 0 {
 			meta := parseMetadata(e.Text)
@@ -48,7 +46,7 @@ func RunControllerMode(NodeID string, Port uint16, callback func(ip string, role
 	defer client.Close()
 
 	log.Info("Controller Beacon Active & Scanning...")
-	// 4. Block forever (or until signal)
+
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 	<-sig
@@ -58,7 +56,6 @@ func RunControllerMode(NodeID string, Port uint16, callback func(ip string, role
 func parseMetadata(txtRecords []string) map[string]string {
 	data := make(map[string]string)
 	for _, record := range txtRecords {
-		// Split only on the first "="
 		if key, val, found := strings.Cut(record, "="); found {
 			data[key] = val
 		}
