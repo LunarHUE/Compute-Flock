@@ -15,8 +15,8 @@ var (
 
 // StartAgentBroadcast announces "I am here" (Pending) AND listens for Controllers.
 // Returns the client so you can Close() it later.
-func StartAgentBroadcast(id string, port int) (*zeroconf.Client, error) {
-	me := zeroconf.NewService(TypePending, id, uint16(port))
+func StartAgentBroadcast(id string, port uint16) (*zeroconf.Client, error) {
+	me := zeroconf.NewService(TypePending, id, port)
 	me.Text = []string{"version=1.0", "cpu=4", "distro=nixos"} // Set Metadata
 
 	// We Publish ourselves AND we can optionally browse here if we wanted to.

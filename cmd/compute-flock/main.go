@@ -4,18 +4,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"net"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
+
+	"github.com/lunarhue/libs-go/log"
 
 	"github.com/lunarhue/compute-flock/pkg/discovery"
-	"github.com/lunarhue/compute-flock/pkg/system"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
-	zeroconf "github.com/lunarhue/compute-flock-zeroconf"
 	pb "github.com/lunarhue/compute-flock/pkg/proto/adoption/v1"
 )
 
@@ -39,25 +36,7 @@ type server struct {
 }
 
 func (s *server) Adopt(ctx context.Context, req *pb.AdoptRequest) (*pb.AdoptResponse, error) {
-	log.Printf("Received ADOPT command. Role: %s, Controller: %s", req.Role, req.ControllerIp)
-
-	conf := system.K3sConfig{
-		Role:         req.Role,
-		Token:        req.ClusterToken,
-		ControllerIP: req.ControllerIp,
-		ClusterInit:  (req.Role == "server" && req.ControllerIp == ""),
-	}
-
-	// 2. Trigger NixOS Rebuild (Blocking operation)
-	// In production, do this in a goroutine and return "Accepted" immediately.
-	go func() {
-		if err := system.WriteAndRebuild(conf); err != nil {
-			log.Printf("Rebuild failed: %v", err)
-			return
-		}
-		log.Println("Rebuild complete. Restarting...")
-		os.Exit(0) // Restart to load new config
-	}()
+	log.Infof("Received ADOPT command. Role: %s, Controller: %s", req.Role, req.ControllerIp)
 
 	return &pb.AdoptResponse{Success: true, Message: "Adoption started"}, nil
 }
@@ -76,7 +55,7 @@ func main() {
 	// Start GRPC Server (Listens on all modes)
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", Port))
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Panicf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
 	pb.RegisterFlockServiceServer(s, &server{})
@@ -85,115 +64,44 @@ func main() {
 	// STATE MACHINE
 	switch *mode {
 	case "controller":
-		runControllerMode()
+		discovery.RunControllerMode(NodeID, uint16(Port), func(ip, role string) { adoptNode(currentLocalIP(), ip, role) })
 	case "compute":
-		runComputeMode()
+		discovery.RunComputeMode()
 	case "auto":
-		runPendingMode()
+		discovery.RunPendingMode(NodeID, uint16(Port))
 	}
 }
 
-// ---------------------------------------------------------
-// Mode: COMPUTE (The "Worker" State)
-// ---------------------------------------------------------
-func runComputeMode() {
-	log.Println("State: COMPUTE. Connecting to Cluster...")
-
-	// Survivability Loop
-	for {
-		// Try to find controller
-		controllerIP := discovery.ScanForControllers(5 * time.Second)
-
-		if controllerIP == "" {
-			log.Println("⚠️ Lost Controller! Scanning...")
-			// Logic: If lost for too long, maybe revert to PENDING?
-			// For now, just keep looking.
-		} else {
-			log.Printf("✅ Connected to Controller at %s", controllerIP)
-			// Send Heartbeat via gRPC here
-		}
-
-		time.Sleep(10 * time.Second)
-	}
-}
-
-// ---------------------------------------------------------
-// Mode: CONTROLLER (The "Boss" State)
-// ---------------------------------------------------------
-func runControllerMode() {
-	log.Println("State: CONTROLLER. Managing Cluster...")
-
-	// 1. Define Myself (The Controller Service)
-	me := zeroconf.NewService(discovery.TypeController, NodeID, uint16(Port))
-
-	// 2. Define the Callback for finding new nodes
-	onNodeFound := func(e zeroconf.Event) {
-		// Only react to "Added" events with valid IPs
-		if e.Op == zeroconf.OpAdded && len(e.Addrs) > 0 {
-			log.Printf("👀 Found new node: %s [%v]. Auto-adopting...", e.Name, e.Addrs)
-
-			// Extract IP (prefer IPv4)
-			ip := e.Addrs[0].String()
-			// Note: You might want to iterate e.Addrs to find the IPv4 one specifically
-			// if the network has both.
-
-			go adoptNode(ip, "agent")
-		}
-	}
-
-	// 3. Start the Engine (Publish Myself + Browse for Others)
-	client, err := zeroconf.New().
-		Publish(me).                                // "I am the Controller"
-		Browse(onNodeFound, discovery.TypePending). // "Look for Pending Nodes"
-		Open()
-
+func currentLocalIP() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
-		log.Fatalf("Failed to start zeroconf: %v", err)
+		log.Panic(err)
 	}
-	defer client.Close()
+	defer conn.Close()
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
 
-	log.Println("✅ Controller Beacon Active & Scanning...")
-
-	// 4. Block forever (or until signal)
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
-	<-sig
-	log.Println("Shutting down controller...")
+	return localAddr.IP.String()
 }
 
-// ---------------------------------------------------------
-// Mode: PENDING (The "Unboxed" State)
-// ---------------------------------------------------------
-func runPendingMode() {
-	log.Println("State: PENDING. Broadcasting availability...")
-
-	// 1. Advertise ourselves
-	client, err := discovery.StartAgentBroadcast(NodeID, Port)
+func adoptNode(controllerIp, computeIp string, role string) {
+	conn, err := grpc.NewClient(fmt.Sprintf("%s:%d", computeIp, Port), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("Failed to start broadcast: %v", err)
+		log.Errorf("Failed to connect to %s: %v", computeIp, err)
+		return
 	}
-	defer client.Close()
 
-	// 2. Wait indefinitely
-	select {}
-}
-
-// ... [runComputeMode and adoptNode remain the same] ...
-
-func adoptNode(ip string, role string) {
-	conn, _ := grpc.Dial(fmt.Sprintf("%s:%d", ip, Port), grpc.WithInsecure())
 	defer conn.Close()
 
 	client := pb.NewFlockServiceClient(conn)
-	_, err := client.Adopt(context.Background(), &pb.AdoptRequest{
+	_, err = client.Adopt(context.Background(), &pb.AdoptRequest{
 		ClusterToken: "my-secret-token",
-		ControllerIp: "192.168.1.10", // Self IP
+		ControllerIp: controllerIp,
 		Role:         role,
 	})
 
 	if err != nil {
-		log.Printf("Failed to adopt %s: %v", ip, err)
+		log.Errorf("Failed to adopt %s: %v", computeIp, err)
 	} else {
-		log.Printf("Successfully sent adoption command to %s", ip)
+		log.Infof("Successfully sent adoption command to %s", computeIp)
 	}
 }
