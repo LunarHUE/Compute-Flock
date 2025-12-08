@@ -19,27 +19,33 @@ import (
 	pb "github.com/lunarhue/compute-flock/pkg/proto/adoption/v1"
 )
 
+type FlockMode string
+
+const (
+	ModePending    FlockMode = "PENDING"
+	ModeController FlockMode = "CONTROLLER"
+	ModeCompute    FlockMode = "COMPUTE"
+)
+
 // Global State
 var (
 	NodeID       string
-	CurrentState = "PENDING" // PENDING, CONTROLLER, COMPUTE
-	Port         = 9000
+	CurrentState FlockMode = ModePending
+	Port                   = 9000
 )
 
 type server struct {
 	pb.UnimplementedFlockServiceServer
 }
 
-// Handle Adoption Request
 func (s *server) Adopt(ctx context.Context, req *pb.AdoptRequest) (*pb.AdoptResponse, error) {
 	log.Printf("Received ADOPT command. Role: %s, Controller: %s", req.Role, req.ControllerIp)
 
-	// 1. Write Config
 	conf := system.K3sConfig{
 		Role:         req.Role,
 		Token:        req.ClusterToken,
 		ControllerIP: req.ControllerIp,
-		ClusterInit:  (req.Role == "server" && req.ControllerIp == ""), // simplified logic
+		ClusterInit:  (req.Role == "server" && req.ControllerIp == ""),
 	}
 
 	// 2. Trigger NixOS Rebuild (Blocking operation)

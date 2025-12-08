@@ -5,6 +5,7 @@ go 1.25.4
 require (
 	github.com/lunarhue/compute-flock-zeroconf v0.0.0-20251205233122-68bd1ee895f1 // indirect
 	github.com/lunarhue/flock-zeroconf v0.0.0-20251205231229-7928d77a3e7f // indirect
+	github.com/lunarhue/libs-go v0.0.0-20251104220252-9dbd0c8db5d6 // indirect
 	github.com/miekg/dns v1.1.62 // indirect
 	golang.org/x/mod v0.28.0 // indirect
 	golang.org/x/net v0.46.1-0.20251013234738-63d1a5100f82 // indirect

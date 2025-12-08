@@ -2,6 +2,8 @@ github.com/lunarhue/compute-flock-zeroconf v0.0.0-20251205233122-68bd1ee895f1 h1
 github.com/lunarhue/compute-flock-zeroconf v0.0.0-20251205233122-68bd1ee895f1/go.mod h1:YrvtuIriSpBB5yDeB9VMIdiloRgqtoqkTFWHcad79SQ=
 github.com/lunarhue/flock-zeroconf v0.0.0-20251205231229-7928d77a3e7f h1:jopUTRu7UR2ynx6nSQbODvxQsD69ZdKPtN63yZ27hsI=
 github.com/lunarhue/flock-zeroconf v0.0.0-20251205231229-7928d77a3e7f/go.mod h1:/7MHVlzwmjDyy/wcYGOXQLzAmLjwCwUSe/iTfyRBwIM=
+github.com/lunarhue/libs-go v0.0.0-20251104220252-9dbd0c8db5d6 h1:KotHoNt0cP/hlGtu7DEhRNGX61VJroRHz8M4JRDsytQ=
+github.com/lunarhue/libs-go v0.0.0-20251104220252-9dbd0c8db5d6/go.mod h1:gXdvk+syN0FfYAJfvWl7vJ717FcgpbyHQYk02k4CO6U=
 github.com/miekg/dns v1.1.62 h1:cN8OuEF1/x5Rq6Np+h1epln8OiyPWV+lROx9LxcGgIQ=
 github.com/miekg/dns v1.1.62/go.mod h1:mvDlcItzm+br7MToIKqkglaGhlFMHJ9DTNNWONWXbNQ=
 golang.org/x/mod v0.22.0 h1:D4nJWe9zXqHOmWqj4VMOJhvzj7bEZg4wEYa759z1pH4=
