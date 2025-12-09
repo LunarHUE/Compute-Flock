@@ -8,15 +8,6 @@ import (
 	"time"
 )
 
-// CreateJoinToken generates a new cluster join token by calling the local k3s instance.
-//
-// Parameters:
-//   - description: A human-readable note for auditing (e.g., "worker-node-01").
-//   - ttl: The Time-To-Live for the token. If 0, it defaults to K3s default (usually 24h).
-//
-// Returns:
-//   - The generated token string (trimmed).
-//   - An error if the k3s command fails or is not found.
 func CreateJoinToken(description string, ttl time.Duration) (string, error) {
 	binPath, err := exec.LookPath("k3s")
 	if err != nil {

@@ -59,6 +59,10 @@ func main() {
 
 	// Verify that the prerequisites are met
 	if !*noVerify {
+		if err := k3s.EnsureConfigFile(k3s.DefaultConfigPath); err != nil {
+			log.Panic(err)
+		}
+
 		if err := k3s.VerifyK3sInstallation(); err != nil {
 			log.Panicf("K3s verification failed: %v", err)
 		}
@@ -128,7 +132,7 @@ func adoptNode(controllerIp, computeIp string, role string) {
 
 	defer conn.Close()
 
-	adoptionToken, err := k3s.CreateJoinToken("compute-flock-node", 10*time.Minute)
+	adoptionToken, err := k3s.CreateJoinToken("compute-flock-node", 1*time.Minute)
 	if err != nil {
 		log.Errorf("Failed to create join token: %v", err)
 		return

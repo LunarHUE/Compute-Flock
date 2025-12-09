@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/lunarhue/libs-go/log"
@@ -24,6 +25,11 @@ func VerifyK3sInstallation() error {
 		log.Panicf("[FAIL] Distribution check failed: %v", err)
 	}
 	log.Info("[OK] Supported Linux distribution detected.")
+
+	if err := verifyProcessConfig("k3s", DefaultConfigPath); err != nil {
+		log.Panicf("[FAIL] K3s config check failed: %v", err)
+	}
+	log.Info("[OK] K3s is running with the correct configuration file.")
 
 	if err := checkProcessArgs("k3s", "server"); err != nil {
 		log.Panicf("[FAIL] K3s process argument check failed: %v", err)
@@ -110,5 +116,50 @@ func checkFirewallPort(port, protocol string) error {
 	if !found {
 		return fmt.Errorf("port %s/%s not found in 'nixos-fw' chain", port, protocol)
 	}
+	return nil
+}
+
+func verifyProcessConfig(processName, configPath string) error {
+	// 1. Check if the file exists on disk
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return fmt.Errorf("config file does not exist at %s", configPath)
+	}
+
+	// 2. Check if the running process is using that file
+	cmd := exec.Command("pgrep", "-a", processName)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("process '%s' is not running", processName)
+	}
+
+	outStr := string(output)
+	expectedFlag := fmt.Sprintf("--config %s", configPath)
+
+	if !strings.Contains(outStr, expectedFlag) {
+		return fmt.Errorf("process is running, but NOT using the expected config file.\nExpected arg: %s\nFound args: %s", expectedFlag, outStr)
+	}
+
+	return nil
+}
+
+func EnsureConfigFile(path string) error {
+	// Check if exists
+	if _, err := os.Stat(path); err == nil {
+		return nil // File exists, do nothing
+	}
+
+	// Create directory path if needed
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	// Create an empty file.
+	// An empty file is valid YAML (it just means "use all defaults").
+	if err := os.WriteFile(path, []byte(""), 0644); err != nil {
+		return fmt.Errorf("failed to create config file: %w", err)
+	}
+
+	log.Infof("[INIT] Created empty K3s config file at %s", path)
 	return nil
 }
