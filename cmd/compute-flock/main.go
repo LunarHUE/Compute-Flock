@@ -42,6 +42,8 @@ func (s *server) Adopt(ctx context.Context, req *pb.AdoptRequest) (*pb.AdoptResp
 	log.Infof("Received ADOPT command. Role: %s, Controller: %s", req.Role, req.ControllerIp)
 	log.Infof("Cluster Token: %s", req.ClusterToken)
 
+	k3s.JoinCluster(fmt.Sprintf("https://%s:6443", req.ControllerIp), req.ClusterToken)
+
 	return &pb.AdoptResponse{Success: true, Message: "Adoption started"}, nil
 }
 
@@ -59,10 +61,6 @@ func main() {
 
 	// Verify that the prerequisites are met
 	if !*noVerify {
-		if err := k3s.EnsureConfigFile(k3s.DefaultConfigPath); err != nil {
-			log.Panic(err)
-		}
-
 		if err := k3s.VerifyK3sInstallation(); err != nil {
 			log.Panicf("K3s verification failed: %v", err)
 		}
