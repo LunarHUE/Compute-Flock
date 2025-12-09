@@ -84,14 +84,14 @@
                 wants = [ "k3s.service" ];
                 wantedBy = [ "multi-user.target" ];
 
+                path = with pkgs; [ 
+                  procps
+                ];
+
                 serviceConfig = {
                   ExecStart = "${cfg.package}/bin/compute-flock --mode ${cfg.mode}";
                   Environment = [ 
 
-                  ];
-
-                  path = with pkgs; [ 
-                    procps
                   ];
 
                   DynamicUser = false;
