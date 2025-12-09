@@ -16,6 +16,8 @@ func RunControllerMode(NodeID string, Port uint16, callback func(ip string, role
 	me := zeroconf.NewService(TypeController, NodeID, Port)
 
 	onNodeFound := func(e zeroconf.Event) {
+		log.Infof("[DISCOVERY] Saw Service: %s | Operation: %v", e.Name, e.Op)
+
 		if e.Op == zeroconf.OpAdded && len(e.Addrs) > 0 {
 			meta := parseMetadata(e.Text)
 
