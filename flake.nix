@@ -96,9 +96,10 @@
                 wants = [ "k3s.service" ];
                 wantedBy = [ "multi-user.target" ];
 
-                path = with pkgs; [ 
+                path = with pkgs; [
                   procps    # for pgrep
                   iptables  # for iptables checks
+                  k3s       # for k3s binary
                 ];
 
                 serviceConfig = {
