@@ -24,7 +24,7 @@ type FlockMode string
 const (
 	ModePending    FlockMode = "PENDING"
 	ModeController FlockMode = "CONTROLLER"
-	ModeCompute    FlockMode = "COMPUTE"
+	ModeAgent      FlockMode = "AGENT"
 )
 
 // Global State
@@ -52,7 +52,7 @@ func (s *server) Heartbeat(ctx context.Context, req *pb.HeartbeatRequest) (*pb.H
 }
 
 func main() {
-	mode := flag.String("mode", "auto", "Force mode: controller, compute, auto")
+	mode := flag.String("mode", "auto", "Force mode: controller, agent, auto")
 	noVerify := flag.Bool("no-verify", false, "Skip K3s installation verification")
 	flag.Parse()
 
@@ -86,9 +86,7 @@ func main() {
 	switch *mode {
 	case "controller":
 		discovery.RunControllerMode(NodeID, uint16(DefaultPort), func(ip, role string) { adoptNode(currentLocalIP(), ip, role) })
-	case "compute":
-		discovery.RunComputeMode()
-	case "auto":
+	case "agent":
 		discovery.RunPendingMode(NodeID, uint16(DefaultPort))
 	}
 }
