@@ -90,6 +90,10 @@
 
                   ];
 
+                  path = with pkgs; [ 
+                    procps
+                  ];
+
                   DynamicUser = false;
 
                   # 2. Explicitly set User to root (Optional, as it defaults to root when DynamicUser is false)
