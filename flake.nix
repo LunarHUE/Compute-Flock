@@ -89,11 +89,17 @@
                   Environment = [ 
 
                   ];
-                  
-                  # Hardening
-                  DynamicUser = true;
+
+                  DynamicUser = false;
+
+                  # 2. Explicitly set User to root (Optional, as it defaults to root when DynamicUser is false)
+                  User = "root";
+                  Group = "root";
+
+                  # Keep your restart policies
                   Restart = "always";
                   RestartSec = "5s";
+                  
                   StateDirectory = "compute-flock";
                   CacheDirectory = "compute-flock";
                 };
