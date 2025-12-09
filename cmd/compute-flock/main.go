@@ -49,14 +49,17 @@ func (s *server) Heartbeat(ctx context.Context, req *pb.HeartbeatRequest) (*pb.H
 
 func main() {
 	mode := flag.String("mode", "auto", "Force mode: controller, compute, auto")
+	noVerify := flag.Bool("no-verify", false, "Skip K3s installation verification")
 	flag.Parse()
 
 	hostname, _ := os.Hostname()
 	NodeID = hostname
 
 	// Verify that the prerequisites are met
-	if err := k3s.VerifyK3sInstallation(); err != nil {
-		log.Panicf("K3s verification failed: %v", err)
+	if !*noVerify {
+		if err := k3s.VerifyK3sInstallation(); err != nil {
+			log.Panicf("K3s verification failed: %v", err)
+		}
 	}
 
 	// Start GRPC Server (Listens on all modes)
