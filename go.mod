@@ -4,7 +4,7 @@ go 1.25.4
 
 require (
 	github.com/lunarhue/compute-flock-zeroconf v0.0.0-20251205233122-68bd1ee895f1
-	github.com/lunarhue/libs-go v0.0.0-20251208191406-2a4eeef76e30
+	github.com/lunarhue/libs-go v0.0.0-20251209203809-7faaa99b65eb
 	google.golang.org/grpc v1.77.0
 	google.golang.org/protobuf v1.36.10
 )

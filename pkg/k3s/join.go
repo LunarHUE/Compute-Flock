@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"time"
+
+	"github.com/lunarhue/libs-go/log"
 )
 
 func JoinCluster(serverURL string, token string) error {
@@ -24,9 +26,8 @@ func JoinCluster(serverURL string, token string) error {
 	}
 
 	// 3. Prepare the Context with a Timeout
-	// This context will automatically "fire" (cancel) after 10 seconds
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel() // Ensure cleanup
+	defer cancel()
 
 	// 4. Prepare the Agent Command
 	args := []string{
@@ -37,10 +38,13 @@ func JoinCluster(serverURL string, token string) error {
 
 	// CommandContext will kill the process when ctx expires (10 seconds)
 	cmd := exec.CommandContext(ctx, binPath, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 
-	fmt.Printf("Starting temporary K3s Agent (10 second run) against %s...\n", serverURL)
+	finishLog, err := log.LogCommand(cmd, "K3S-AGENT")
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Starting temporary K3s Agent (10 second run) against %s...\n", serverURL)
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start temporary agent: %w", err)
@@ -50,16 +54,18 @@ func JoinCluster(serverURL string, token string) error {
 	// cmd.Wait() will return an error when the process is killed by the context.
 	err = cmd.Wait()
 
+	finishLog()
+
 	// Check why it stopped
 	if ctx.Err() == context.DeadlineExceeded {
-		fmt.Println("\n10 seconds reached. Process killed successfully.")
+		log.Infof("\n10 seconds reached. Process killed successfully.")
 	} else if err != nil {
 		// If it crashed *before* the 10 seconds were up
-		fmt.Printf("\nWarning: Agent exited early or failed: %v\n", err)
+		log.Warnf("\nWarning: Agent exited early or failed: %v\n", err)
 	}
 
 	// 6. Restart the systemd service
-	fmt.Println("Restarting k3s systemd service...")
+	log.Infof("Restarting k3s systemd service...")
 	restartCmd := exec.Command("systemctl", "restart", "k3s")
 	restartCmd.Stdout = os.Stdout
 	restartCmd.Stderr = os.Stderr
@@ -67,6 +73,8 @@ func JoinCluster(serverURL string, token string) error {
 	if err := restartCmd.Run(); err != nil {
 		return fmt.Errorf("failed to restart k3s service: %w", err)
 	}
+
+	log.Infof("K3s service restarted successfully.")
 
 	return nil
 }

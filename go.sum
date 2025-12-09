@@ -21,6 +21,8 @@ github.com/lunarhue/compute-flock-zeroconf v0.0.0-20251205233122-68bd1ee895f1 h1
 github.com/lunarhue/compute-flock-zeroconf v0.0.0-20251205233122-68bd1ee895f1/go.mod h1:YrvtuIriSpBB5yDeB9VMIdiloRgqtoqkTFWHcad79SQ=
 github.com/lunarhue/libs-go v0.0.0-20251208191406-2a4eeef76e30 h1:e4IrsWR+l11YvUyM2hzAAZHzjdkTuStDuluAnN/MdZ0=
 github.com/lunarhue/libs-go v0.0.0-20251208191406-2a4eeef76e30/go.mod h1:jLg5nxZoIA8KDas6WEhVdkqEhuJ99qL9FpGO+VnR2gA=
+github.com/lunarhue/libs-go v0.0.0-20251209203809-7faaa99b65eb h1:5Ixk3SiGzWv/mr3rdSwkPqnFFg9HPz/XJqdUVkVDnbk=
+github.com/lunarhue/libs-go v0.0.0-20251209203809-7faaa99b65eb/go.mod h1:jLg5nxZoIA8KDas6WEhVdkqEhuJ99qL9FpGO+VnR2gA=
 github.com/miekg/dns v1.1.62 h1:cN8OuEF1/x5Rq6Np+h1epln8OiyPWV+lROx9LxcGgIQ=
 github.com/miekg/dns v1.1.62/go.mod h1:mvDlcItzm+br7MToIKqkglaGhlFMHJ9DTNNWONWXbNQ=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
