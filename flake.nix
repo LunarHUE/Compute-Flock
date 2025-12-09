@@ -80,8 +80,8 @@
             config = lib.mkIf cfg.enable {
               systemd.services.compute-flock = {
                 description = "Compute Flock Agent";
-                wants = [ "network-online.target" ];
-                after = [ "network-online.target" ];
+                after = [ "network-online.target" "k3s.service" ];
+                wants = [ "k3s.service" ];
                 wantedBy = [ "multi-user.target" ];
 
                 serviceConfig = {

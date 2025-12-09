@@ -73,7 +73,7 @@ func checkProcessArgs(processName, expectedArg string) error {
 	cmd := exec.Command("pgrep", "-a", processName)
 	output, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("process '%s' is not running", processName)
+		return fmt.Errorf("pgrep check failed for '%s': %w", processName, err)
 	}
 
 	outStr := string(output)
