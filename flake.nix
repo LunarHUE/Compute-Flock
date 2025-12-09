@@ -26,7 +26,7 @@
           };
 
           vendorHash = "sha256-0000000000000000000000000000000000000000000=";
-          CGO_ENABLED = 0;
+          env.CGO_ENABLED = 0;
           ldflags = [
             "-s" "-w"
             "-X main.Version=0.0.1"
