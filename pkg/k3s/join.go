@@ -1,7 +1,6 @@
 package k3s
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,71 +9,63 @@ import (
 	"github.com/lunarhue/libs-go/log"
 )
 
-func JoinCluster(serverURL string, token string) error {
-	// 1. Stop the systemd service
-	fmt.Println("Stopping k3s service...")
-	stopCmd := exec.Command("systemctl", "stop", "k3s")
-	stopCmd.Stdout = os.Stdout
-	stopCmd.Stderr = os.Stderr
-	// Ignore errors here in case the service is already stopped
-	_ = stopCmd.Run()
+func StartAgent(serverURL string, token string) error {
+	const unitName = "k3s-agent.service"
 
-	// 2. Locate k3s binary
 	binPath, err := exec.LookPath("k3s")
 	if err != nil {
 		return fmt.Errorf("k3s binary not found in PATH: %w", err)
 	}
 
-	// 3. Prepare the Context with a Timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	log.Infof("Ensuring previous %s is stopped...", unitName)
+	_ = exec.Command("systemctl", "stop", unitName).Run()
 
-	// 4. Prepare the Agent Command
-	args := []string{
+	// 3. Construct the systemd-run command
+	// This creates a service named 'k3s-agent' that restarts automatically if it fails.
+	// equivalent to: systemd-run --unit=k3s-agent -p Restart=always k3s agent ...
+	cmd := exec.Command("systemd-run",
+		"--unit="+unitName,
+		"--description=K3s Agent (Transient)",
+		"-p", "Restart=always", // Auto-restart if it crashes
+		"-p", "RestartSec=10", // Wait 10s before restarting
+		binPath, // Command to run
 		"agent",
 		"--server", serverURL,
 		"--token", token,
+	)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	log.Infof("Spawning K3s Agent via systemd-run against %s...", serverURL)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to spawn k3s-agent service: %w", err)
 	}
 
-	// CommandContext will kill the process when ctx expires (10 seconds)
-	cmd := exec.CommandContext(ctx, binPath, args...)
-
-	finishLog, err := log.LogCommand(cmd, "K3S-AGENT")
-	if err != nil {
-		return err
+	// 4. Verification (Optional but recommended)
+	// Give systemd a moment to spin it up and check status
+	time.Sleep(1 * time.Second)
+	if err := checkServiceRunning(unitName); err != nil {
+		return fmt.Errorf("agent service failed to start: %w", err)
 	}
 
-	log.Infof("Starting temporary K3s Agent (30 second run) against %s...\n", serverURL)
-
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start temporary agent: %w", err)
-	}
-
-	// 5. Wait for the timeout
-	// cmd.Wait() will return an error when the process is killed by the context.
-	err = cmd.Wait()
-
-	finishLog()
-
-	// Check why it stopped
-	if ctx.Err() == context.DeadlineExceeded {
-		log.Infof("\n10 seconds reached. Process killed successfully.")
-	} else if err != nil {
-		// If it crashed *before* the 10 seconds were up
-		log.Warnf("\nWarning: Agent exited early or failed: %v\n", err)
-	}
-
-	// 6. Restart the systemd service
-	log.Infof("Restarting k3s systemd service...")
-	restartCmd := exec.Command("systemctl", "restart", "k3s")
-	restartCmd.Stdout = os.Stdout
-	restartCmd.Stderr = os.Stderr
-
-	if err := restartCmd.Run(); err != nil {
-		return fmt.Errorf("failed to restart k3s service: %w", err)
-	}
-
-	log.Infof("K3s service restarted successfully.")
-
+	log.Infof("SUCCESS: K3s Agent is running in background unit '%s'", unitName)
 	return nil
+}
+
+func checkServiceRunning(unitName string) error {
+	cmd := exec.Command("systemctl", "is-active", unitName)
+	output, _ := cmd.Output()
+	state := string(output)
+
+	if len(state) > 0 {
+		state = state[:len(state)-1] // trim newline
+	}
+
+	if state == "active" || state == "activating" {
+		return nil
+	}
+
+	logs, _ := exec.Command("journalctl", "-u", unitName, "-n", "10", "--no-pager").CombinedOutput()
+	return fmt.Errorf("service state is '%s'. Recent logs:\n%s", state, string(logs))
 }

@@ -42,7 +42,7 @@ func (s *server) Adopt(ctx context.Context, req *pb.AdoptRequest) (*pb.AdoptResp
 	log.Infof("Received ADOPT command. Role: %s, Controller: %s", req.Role, req.ControllerIp)
 	log.Infof("Cluster Token: %s", req.ClusterToken)
 
-	k3s.JoinCluster(fmt.Sprintf("https://%s:6443", req.ControllerIp), req.ClusterToken)
+	k3s.StartAgent(fmt.Sprintf("https://%s:6443", req.ControllerIp), req.ClusterToken)
 
 	return &pb.AdoptResponse{Success: true, Message: "Adoption started"}, nil
 }
