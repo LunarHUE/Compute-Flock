@@ -96,7 +96,7 @@
                   "network-online.target"
                   # "k3s.service"
                 ];
-                # wants = [ "k3s.service" ];
+                wants = [ "network-online.target" ];
                 wantedBy = [ "multi-user.target" ];
 
                 path = with pkgs; [
