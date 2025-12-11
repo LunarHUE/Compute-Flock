@@ -26,17 +26,21 @@ func VerifyK3sInstallation(mode string) error {
 	log.Info("[OK] K3s binary is present in PATH.")
 
 	if mode == "server" {
-		err := checkServiceActive("k3s")
+		// In your new setup, the service should exist but might be stopped.
+		// We check if it is 'loaded' rather than 'active'.
+		err := checkServiceLoaded("k3s.service")
 		if err != nil {
-			log.Panicf("[FAIL] K3s service check failed: %v", err)
+			log.Panicf("[FAIL] K3s service definition check failed: %v", err)
 		}
-		log.Info("[OK] K3s service is active.")
+		log.Info("[OK] K3s systemd unit is loaded and ready.")
+	}
 
-		err = checkProcessArgs("k3s", "server")
-		if err != nil {
-			log.Panicf("[FAIL] K3s process argument check failed: %v", err)
+	if mode == "agent" {
+		// Agents in your setup do NOT have a systemd service created by NixOS.
+		// We verify that NO conflicting service exists.
+		if err := checkServiceLoaded("k3s.service"); err == nil {
+			log.Warnf("[WARNING] A 'k3s.service' was found but this node is an AGENT. This might cause conflicts if the service auto-starts.")
 		}
-		log.Info("[OK] K3s process is running with expected arguments.")
 	}
 
 	if err := checkFirewallPort("6443", "tcp"); err != nil {
@@ -45,6 +49,40 @@ func VerifyK3sInstallation(mode string) error {
 	log.Info("[OK] Required firewall ports are open.")
 
 	return nil
+}
+
+func checkServiceLoaded(serviceName string) error {
+	// "show -p LoadState" returns "LoadState=loaded" if the unit file is valid
+	cmd := exec.Command("systemctl", "show", "-p", "LoadState", "--value", serviceName)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to query systemd: %v", err)
+	}
+
+	state := strings.TrimSpace(string(output))
+	if state != "loaded" {
+		return fmt.Errorf("unit %s is not loaded (state: %s). Is the NixOS config applied?", serviceName, state)
+	}
+	return nil
+}
+
+func checkFirewallPort(port, protocol string) error {
+	cmd := exec.Command("iptables", "-L", "nixos-fw", "-n")
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("could not inspect iptables: %v", err)
+	}
+
+	searchString := fmt.Sprintf("dpt:%s", port)
+	lines := strings.Split(string(output), "\n")
+
+	for _, line := range lines {
+		if strings.Contains(line, searchString) && strings.Contains(strings.ToLower(line), strings.ToLower(protocol)) {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("port %s/%s not found in 'nixos-fw' chain", port, protocol)
 }
 
 func checkDistribution() error {
@@ -59,66 +97,6 @@ func checkDistribution() error {
 		return fmt.Errorf("unsupported distribution: %s", outStr)
 	}
 
-	return nil
-}
-
-func checkServiceActive(serviceName string) error {
-	cmd := exec.Command("systemctl", "is-active", serviceName)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("service check failed: %v", err)
-	}
-
-	status := strings.TrimSpace(string(output))
-	if status != "active" {
-		return fmt.Errorf("service is not active. Status returned: %s", status)
-	}
-
-	return nil
-}
-
-func checkProcessArgs(processName, expectedArg string) error {
-	// pgrep -a lists the full command line
-	cmd := exec.Command("pgrep", "-a", processName)
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("pgrep check failed for '%s': %w", processName, err)
-	}
-
-	outStr := string(output)
-	if !strings.Contains(outStr, expectedArg) {
-		return fmt.Errorf("process '%s' found, but argument '%s' is missing", processName, expectedArg)
-	}
-	return nil
-}
-
-func checkFirewallPort(port, protocol string) error {
-	// NixOS puts user-defined allowedPorts in the 'nixos-fw' chain.
-	// We use -n to avoid DNS lookups (speed) and grep for the port.
-	cmd := exec.Command("iptables", "-L", "nixos-fw", "-n")
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("could not inspect iptables (are you root?): %v", err)
-	}
-
-	// Output format typically includes "dpt:6443" or similar
-	searchString := fmt.Sprintf("dpt:%s", port)
-
-	// Also ensure protocol matches (e.g., checking if the line that has the port also has the protocol)
-	lines := strings.Split(string(output), "\n")
-	found := false
-
-	for _, line := range lines {
-		// We verify the line contains the port AND the protocol to avoid false positives
-		if strings.Contains(line, searchString) && strings.Contains(strings.ToLower(line), strings.ToLower(protocol)) {
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		return fmt.Errorf("port %s/%s not found in 'nixos-fw' chain", port, protocol)
-	}
 	return nil
 }
 
