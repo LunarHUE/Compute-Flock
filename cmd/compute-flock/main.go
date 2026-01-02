@@ -12,13 +12,13 @@ import (
 
 	"github.com/lunarhue/libs-go/log"
 
-	"github.com/lunarhue/compute-flock/pkg/discovery"
-	"github.com/lunarhue/compute-flock/pkg/fingerprint"
-	"github.com/lunarhue/compute-flock/pkg/k3s"
+	"github.com/lunarhue/metallic-flock/pkg/discovery"
+	"github.com/lunarhue/metallic-flock/pkg/fingerprint"
+	"github.com/lunarhue/metallic-flock/pkg/k3s"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	pb "github.com/lunarhue/compute-flock/pkg/proto/adoption/v1"
+	pb "github.com/lunarhue/metallic-flock/pkg/proto/adoption/v1"
 )
 
 type FlockMode string
@@ -145,7 +145,7 @@ func adoptNode(controllerIp, computeIp string, role string) {
 
 	defer conn.Close()
 
-	adoptionToken, err := k3s.CreateJoinToken("compute-flock-node", 1*time.Minute)
+	adoptionToken, err := k3s.CreateJoinToken("metallic-flock-node", 1*time.Minute)
 	if err != nil {
 		log.Errorf("Failed to create join token: %v", err)
 		return

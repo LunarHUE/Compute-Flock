@@ -1,10 +1,11 @@
-module github.com/lunarhue/compute-flock
+module github.com/lunarhue/metallic-flock
 
 go 1.25.4
 
 require (
-	github.com/lunarhue/compute-flock-zeroconf v0.0.0-20251205233122-68bd1ee895f1
+	github.com/jaypipes/ghw v0.21.2
 	github.com/lunarhue/libs-go v0.0.0-20251209203809-7faaa99b65eb
+	github.com/lunarhue/metallic-flock-zeroconf v0.0.0-20260102211421-1125516b5462
 	google.golang.org/grpc v1.77.0
 	google.golang.org/protobuf v1.36.10
 )
@@ -12,7 +13,6 @@ require (
 require (
 	github.com/ebitengine/purego v0.9.1 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/jaypipes/ghw v0.21.2 // indirect
 	github.com/jaypipes/pcidb v1.1.1 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/miekg/dns v1.1.62 // indirect

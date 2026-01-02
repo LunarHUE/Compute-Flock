@@ -12,7 +12,7 @@
         pkgs = import nixpkgs { inherit system; };
 
         recipe = { lib, ... }: pkgs.buildGoModule {
-          pname = "compute-flock";
+          pname = "metallic-flock";
           version = "0.0.2"; # You can also read this from a file if you want
 
           src = lib.fileset.toSource {
@@ -34,15 +34,15 @@
 
           meta = with lib; {
             description = "Compute Flock Agent";
-            homepage = "https://github.com/lunarhue/compute-flock";
+            homepage = "https://github.com/lunarhue/metallic-flock";
             license = licenses.mit;
           };
         };
 
       in rec {
         # 2. PACKAGES
-        packages.compute-flock = pkgs.callPackage recipe {};
-        packages.default = packages.compute-flock;
+        packages.metallic-flock = pkgs.callPackage recipe {};
+        packages.default = packages.metallic-flock;
 
         # 3. DEV SHELL
         devShells.default = pkgs.mkShell {
@@ -59,9 +59,9 @@
       # 4. NIXOS MODULE (Systemd Configuration)
       // flake-utils.lib.eachDefaultSystemPassThrough (system: {
         nixosModules.default = { pkgs, lib, config, ...}:
-          let cfg = config.services.compute-flock; in {
+          let cfg = config.services.metallic-flock; in {
             
-            options.services.compute-flock = with lib; {
+            options.services.metallic-flock = with lib; {
               enable = mkEnableOption "Compute Flock Service";
 
               package = mkOption {
@@ -90,7 +90,7 @@
                   ];
                 };
 
-              systemd.services.compute-flock = {
+              systemd.services.metallic-flock = {
                 description = "Compute Flock Agent";
                 after = [
                   "network-online.target"
@@ -107,7 +107,7 @@
                 ];
 
                 serviceConfig = {
-                  ExecStart = "${cfg.package}/bin/compute-flock --mode ${cfg.mode}";
+                  ExecStart = "${cfg.package}/bin/metallic-flock --mode ${cfg.mode}";
                   Environment = [ 
 
                   ];
@@ -122,8 +122,8 @@
                   Restart = "always";
                   RestartSec = "5s";
                   
-                  StateDirectory = "compute-flock";
-                  CacheDirectory = "compute-flock";
+                  StateDirectory = "metallic-flock";
+                  CacheDirectory = "metallic-flock";
                 };
               };
             };

@@ -8,9 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	zeroconf "github.com/lunarhue/compute-flock-zeroconf"
-	"github.com/lunarhue/compute-flock/pkg/k3s"
 	"github.com/lunarhue/libs-go/log"
+	zeroconf "github.com/lunarhue/metallic-flock-zeroconf"
+	"github.com/lunarhue/metallic-flock/pkg/k3s"
 )
 
 func RunControllerMode(NodeID string, Port uint16, callback func(ip string, role string)) {
