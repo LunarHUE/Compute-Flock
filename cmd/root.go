@@ -1,9 +1,7 @@
-package main
+package cmd
 
 import (
 	"context"
-	"encoding/json"
-	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -12,9 +10,9 @@ import (
 
 	"github.com/lunarhue/libs-go/log"
 
-	"github.com/lunarhue/metallic-flock/pkg/discovery"
-	"github.com/lunarhue/metallic-flock/pkg/fingerprint"
+	"github.com/lunarhue/metallic-flock/cmd/debug"
 	"github.com/lunarhue/metallic-flock/pkg/k3s"
+	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -40,6 +38,23 @@ type server struct {
 	pb.UnimplementedFlockServiceServer
 }
 
+var rootCmd = &cobra.Command{
+	Use:   "metallic",
+	Short: "Used to create base k3s cluster.",
+	Long:  `Sets up the controller and agent relationship and does cluster authentication.`,
+}
+
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func init() {
+	rootCmd.AddCommand(debug.RootCmd)
+}
+
 func (s *server) Adopt(ctx context.Context, req *pb.AdoptRequest) (*pb.AdoptResponse, error) {
 	log.Infof("Received ADOPT command. Role: %s, Controller: %s", req.Role, req.ControllerIp)
 	log.Infof("Cluster Token: %s", req.ClusterToken)
@@ -51,61 +66,6 @@ func (s *server) Adopt(ctx context.Context, req *pb.AdoptRequest) (*pb.AdoptResp
 
 func (s *server) Heartbeat(ctx context.Context, req *pb.HeartbeatRequest) (*pb.HeartbeatResponse, error) {
 	return &pb.HeartbeatResponse{Reconfigure: false}, nil
-}
-
-func main() {
-	// TESTING
-	fingerprint, err := fingerprint.GetFingerprint()
-	if err != nil {
-		log.Panicf("Fingerprint failed: %v", err)
-	}
-
-	jsonResult, err := json.Marshal(fingerprint)
-	if err != nil {
-		log.Panicf("Failed to marshal json: %v", err)
-	}
-
-	//base64Result := base64.StdEncoding.EncodeToString(jsonResult)
-
-	log.Infof("Fingerprint: %s", jsonResult)
-
-	mode := flag.String("mode", "auto", "Force mode: server, agent, auto")
-	noVerify := flag.Bool("no-verify", false, "Skip K3s installation verification")
-	flag.Parse()
-
-	hostname, _ := os.Hostname()
-	NodeID = hostname
-
-	// Verify that the prerequisites are met
-	if !*noVerify {
-		if err := k3s.VerifyK3sInstallation(*mode); err != nil {
-			log.Panicf("K3s verification failed: %v", err)
-		}
-	}
-
-	// Start GRPC Server (Listens on all modes)
-	apiPort := findOpenPort(DefaultPort)
-	if apiPort == 0 {
-		log.Panic("No open port found")
-	} else if apiPort != DefaultPort {
-		log.Warnf("Default port %d is in use. Using port %d instead.", DefaultPort, apiPort)
-	}
-
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", apiPort))
-	if err != nil {
-		log.Panicf("failed to listen: %v", err)
-	}
-	s := grpc.NewServer()
-	pb.RegisterFlockServiceServer(s, &server{})
-	go s.Serve(lis)
-
-	// STATE MACHINE
-	switch *mode {
-	case "server":
-		discovery.RunControllerMode(NodeID, uint16(DefaultPort), func(ip, role string) { adoptNode(currentLocalIP(), ip, role) })
-	case "agent":
-		discovery.RunPendingMode(NodeID, uint16(DefaultPort))
-	}
 }
 
 func findOpenPort(defaultPort int) int {
