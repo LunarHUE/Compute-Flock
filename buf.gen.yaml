@@ -33,4 +33,4 @@ managed:
     # - file_option: java_package_prefix
     #   value: net
     - file_option: go_package_prefix
-      value: github.com/lunarhue/compute-flock/pkg/proto
+      value: github.com/lunarhue/metallic-flock/pkg/proto

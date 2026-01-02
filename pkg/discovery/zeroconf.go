@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	zeroconf "github.com/lunarhue/compute-flock-zeroconf"
 	"github.com/lunarhue/libs-go/metadata"
+	zeroconf "github.com/lunarhue/metallic-flock-zeroconf"
 )
 
 // Service Types

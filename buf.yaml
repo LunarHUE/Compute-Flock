@@ -3,7 +3,7 @@ version: v2
 #   - buf.build/bufbuild/protovalidate
 modules:
   - path: proto
-    name: github.com/lunarhue/compute-flock
+    name: github.com/lunarhue/metallic-flock
 
 lint:
   use:
